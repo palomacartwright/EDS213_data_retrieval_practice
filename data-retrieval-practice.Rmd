@@ -1,0 +1,84 @@
+---
+title: "Data Retrieval Practice"
+author: "Paloma Cartwright"
+date: "06/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here) 
+library(tidyverse)
+library(dataRetrieval)
+library(lubridate)
+library(metajam)
+library(janitor)
+```
+
+# Using dataRetrieval USGS package 
+
+```{r}
+siteNumber <- "11118500"
+parameter <- "00060"  # Discharge
+startDate <- "2019-10-01"  
+endDate <- "2020-10-05" 
+
+discharge <- readNWISdv(siteNumber, 
+                        parameter, 
+                        startDate, 
+                        endDate) %>% 
+  rename(discharge = X_00060_00003, 
+         date = Date) 
+
+
+ggplot(discharge, aes(x = date, y = discharge)) +
+  geom_line()
+```
+
+
+If you didn't pass a date argument, what happens?
+
+```{r}
+siteNumber2 <- "11118500"
+parameter2 <- "00060"  # Discharge
+startDate2 <- "" 
+endDate2 <- "2020-10-05"
+discharge_no_date <- readNWISdv(siteNumber2, parameter2, startDate2, endDate2) %>% 
+  rename(date = Date,
+         discharge = X_00060_00003) %>% 
+  filter(lubridate::year(date) > 1930, 
+         year(date) < 1955)
+
+
+ggplot(discharge_no_date, aes(x = date, y = discharge)) +
+  geom_line()
+```
+# Using metajam
+
+```{r}
+
+#data_url <- "https://knb.ecoinformatics.org/knb/d1/mn/v2/object/urn%3Auuid%3A7fc6f6db-c5ea-426a-a743-1f2edafb43b8"
+#path <- "."
+
+#household_data_file <- download_d1_data(data_url = data_url, path = path)
+
+data <- metajam::read_d1_files(household_data_file)
+
+household_data <- data$data
+
+
+only_english <- household_data %>% 
+  clean_names() %>% 
+  filter(year >= 2009, 
+         year <= 2015, 
+         !total == 0) %>% 
+  select(year, sasap_region, city, total, speak_only_english) %>% 
+  group_by(year) %>% 
+  summarize(yearly_percent_avg=mean(speak_only_english/total))
+
+
+ggplot(only_english, aes(x = year, y = yearly_percent_avg)) +
+  geom_line()
+
+```
+
